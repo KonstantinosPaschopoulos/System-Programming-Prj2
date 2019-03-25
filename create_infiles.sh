@@ -19,7 +19,7 @@ else
 fi
 
 # Creating the directory names
-for ((i=1; i <= $3; i++)); do
+for ((i=0; i < $3; i++)); do
 	# Deciding how long the name of each directory will be using shuf
 	length=`shuf -i 1-8 -n 1`
 	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
@@ -33,4 +33,14 @@ done
 # done
 # echo ${dir_names[*]}
 
-# Creating the directories
+# Creating the num_of_dirs directories
+i=0
+while [ $i -lt $3 ]; do
+	j=0
+	mkdir -p $1/${dir_names[$i]}
+	while [ $j -lt $4 ]; do
+		mkdir -p $1/${dir_names[$i]}/${dir_names[$i+1+j]}
+		j=$(( j+1 ))
+	done
+	i=$(( i+j+1 ))
+done
