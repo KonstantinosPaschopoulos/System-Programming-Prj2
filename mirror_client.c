@@ -10,7 +10,8 @@
 int main(int argc, char **argv){
   int i, id, b;
   DIR *common_dir, *input_dir, *mirror_dir;
-  FILE *logfile = NULL;
+  char common_path[50], input_path[50], mirror_path[50], tmp_path[100];
+  FILE *logfile = NULL, *idfile = NULL;
 
   // Checking the input from the command line
   if (argc != 13)
@@ -31,23 +32,23 @@ int main(int argc, char **argv){
     {
       // Creating the common_dir if it doesn't exist
       common_dir = opendir(argv[i + 1]);
-      if (common_dir)
+      strcpy(common_path, argv[i + 1]);
+      if (common_dir == NULL)
       {
-        closedir(common_dir);
-      }
-      else if (errno == ENOENT)
-      {
-        // Creating the directory if it doesn't exist
-        if (mkdir(argv[i + 1], 0777) == -1)
+        if (errno == ENOENT)
         {
-          perror("mkdir failed");
+          // Creating the directory if it doesn't exist
+          if (mkdir(argv[i + 1], 0777) == -1)
+          {
+            perror("mkdir failed");
+            exit(2);
+          }
+        }
+        else
+        {
+          perror("opendir failed");
           exit(2);
         }
-      }
-      else
-      {
-        perror("opendir failed");
-        exit(2);
       }
 
       i++;
@@ -56,19 +57,19 @@ int main(int argc, char **argv){
     {
       // If the directory input_dir doesn't exist the program must terminate
       input_dir = opendir(argv[i + 1]);
-      if (input_dir)
+      strcpy(input_path, argv[i + 1]);
+      if (input_dir == NULL)
       {
-        closedir(input_dir);
-      }
-      else if (errno == ENOENT)
-      {
-        printf("input_dir does not exist\n");
-        exit(1);
-      }
-      else
-      {
-        perror("opendir failed");
-        exit(2);
+        if (errno == ENOENT)
+        {
+          printf("input_dir does not exist\n");
+          exit(1);
+        }
+        else
+        {
+          perror("opendir failed");
+          exit(2);
+        }
       }
 
       i++;
@@ -77,6 +78,7 @@ int main(int argc, char **argv){
     {
       // If the directory mirror_dir exists the program must terminate
       mirror_dir = opendir(argv[i + 1]);
+      strcpy(mirror_path, argv[i + 1]);
       if (mirror_dir)
       {
         closedir(mirror_dir);
@@ -91,6 +93,7 @@ int main(int argc, char **argv){
           perror("mkdir failed");
           exit(2);
         }
+        mirror_dir = opendir(argv[i + 1]);
       }
       else
       {
@@ -113,6 +116,7 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i], "-l") == 0)
     {
+      // Check if the logfile exists already
       if (access(argv[i + 1], F_OK) != -1)
       {
         printf("The logfile already exists\n");
@@ -135,9 +139,30 @@ int main(int argc, char **argv){
     }
   }
 
-  fprintf(logfile, "Hola\n");
+  // Creating the .id file in the common_dir
+  sprintf(tmp_path, "%s/%d.id", common_path, id);
 
+  // Checking if the .id file exists already and is in use by a different client
+  if (access(tmp_path, F_OK) != -1)
+  {
+    printf("The .id file already exists\n");
+    exit(1);
+  }
+
+  // Creating the .id file and writing the pid on it
+  idfile = fopen(tmp_path, "w");
+  if (idfile == NULL)
+  {
+    perror("Couldn't open idfile");
+    exit(2);
+  }
+  fprintf(idfile, "%d", getpid());
+
+  closedir(mirror_dir);
+  closedir(input_dir);
+  closedir(common_dir);
   fclose(logfile);
+  fclose(idfile);
 
   return 0;
 }
