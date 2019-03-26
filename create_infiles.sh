@@ -1,5 +1,6 @@
 #!/bin/bash
 declare -a dir_names
+declare -a file_names
 
 # Checks the number of arguments
 if [ $# -ne 4 ]; then
@@ -19,7 +20,8 @@ else
 fi
 
 # Creating the directory names
-for ((i=0; i < $3; i++)); do
+dir_names[0]="$1";
+for ((i=1; i <= $3; i++)); do
 	# Deciding how long the name of each directory will be using shuf
 	length=`shuf -i 1-8 -n 1`
 	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
@@ -28,15 +30,17 @@ for ((i=0; i < $3; i++)); do
 done
 
 # Creating the num_of_dirs directories
-i=0
+echo Creating the directories:
+i=1
 # The external while loop counts how many directories have been created
-while [ $i -lt $3 ]; do
+while [ $i -le $3 ]; do
 	path="$1/${dir_names[$i]}"
 	mkdir -p "$path"
+	echo "$path"
 	j=1
 	# The internal loop counts how many levels have been created
 	while [ $j -lt $4 ]; do
-		if [ $(( j+i )) -gt $3 ]; then
+		if [ $(( j+i )) -gt $(( $3+1 )) ]; then
 			exit 0
 		fi
 		path="${path}/${dir_names[i+j]}"
@@ -46,3 +50,23 @@ while [ $i -lt $3 ]; do
 	done
 	i=$(( i+j ))
 done
+
+# Creating the file names
+echo
+for ((i=0; i < $2; i++)); do
+	# Deciding how long the name of each directory will be using shuf
+	length=`shuf -i 1-8 -n 1`
+	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
+	# Storing the random alphanumeric string in an array
+	echo "$tmp"
+	file_names[$i]="$tmp";
+done
+
+# # Distributing the files in a round-robin fashion
+# j=0
+# # The loop is used to traverse the file_names array
+# for ((i=0; i < $2; i++)); do
+#
+#
+# 	j=$(( j+1 ))
+# done
