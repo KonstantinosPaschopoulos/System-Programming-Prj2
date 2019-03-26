@@ -15,32 +15,34 @@ if [ -e "$1" ]; then
 		exit 1
 	fi
 else
-	mkdir $1
+	mkdir -p $1
 fi
 
 # Creating the directory names
-for ((i=0; i < $3; i++)); do
+for ((i=0; i < "$3"; i++)); do
 	# Deciding how long the name of each directory will be using shuf
 	length=`shuf -i 1-8 -n 1`
 	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
-	# Storing the random alphanumeric string in the array
+	# Storing the random alphanumeric string in an array
 	dir_names[$i]="$tmp";
 done
 
-# Printing the array
-# for ((i=1; i <= $3; i++)); do
-# 	echo ${dir_names[$i]}
-# done
-# echo ${dir_names[*]}
-
 # Creating the num_of_dirs directories
 i=0
+# The external while loop counts how many directories have been created
 while [ $i -lt $3 ]; do
-	j=0
-	mkdir -p $1/${dir_names[$i]}
+	path="$1/${dir_names[$i]}"
+	mkdir -p "$path"
+	j=1
+	# The internal loop counts how many levels have been created
 	while [ $j -lt $4 ]; do
-		mkdir -p $1/${dir_names[$i]}/${dir_names[$i+1+j]}
+		if [ $(( j+i )) -gt "$3" ]; then
+			exit
+		fi
+		path="${path}/${dir_names[i+j]}"
+		mkdir -p "$path"
+		echo "$path"
 		j=$(( j+1 ))
 	done
-	i=$(( i+j+1 ))
+	i=$(( i+j ))
 done
