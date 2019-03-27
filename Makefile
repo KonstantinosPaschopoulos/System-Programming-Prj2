@@ -1,15 +1,24 @@
-OBJS 	= mirror_client.o
-SOURCE	= mirror_client.c
-HEADER  = types.h
-OUT  	= mirror_client
-CC	= gcc
-FLAGS   = -c -Wall
+CC=gcc
+CFLAGS=  -c -Wall
 
-$(OUT): $(OBJS)
-	$(CC) -g $(OBJS) -o $(OUT)
+all:    mirror_client \
+	sender \
+	receiver
 
-mirror_client.o: mirror_client.c
-	$(CC) $(FLAGS) mirror_client.c
+mirror_client:   mirror_client.c
+	$(CC)  $(CFLAGS) mirror_client.c
+	$(CC)  mirror_client.o -o mirror_client
+
+sender:   sender.c
+	$(CC)  $(CFLAGS) sender.c
+	$(CC)  sender.o -o sender
+
+receiver:   receiver.c
+	$(CC)  $(CFLAGS) receiver.c
+	$(CC)  receiver.o -o receiver
 
 clean:
-	rm -f $(OBJS) $(OUT)
+	rm -f   \
+		mirror_client.o mirror_client \
+		sender.o sender \
+		receiver.o receiver

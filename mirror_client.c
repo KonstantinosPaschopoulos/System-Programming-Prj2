@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include <sys/inotify.h>
 
 #define EVENT_SIZE (sizeof (struct inotify_event))
@@ -27,8 +28,9 @@ int main(int argc, char **argv){
   int inotifyFd, wd;
   int length, read_ptr, read_offset;
 	char buffer[EVENT_BUF_LEN];
-  int i, id, b;
+  int i, id, b, status;
   DIR *common_dir, *input_dir, *mirror_dir;
+  char id_str[100], buffStr[100];
   char common_path[50], input_path[50], mirror_path[50], tmp_path[100];
   FILE *logfile = NULL, *idfile = NULL;
   static struct sigaction act;
@@ -135,6 +137,7 @@ int main(int argc, char **argv){
         printf("b should be a positive number\n");
         exit(1);
       }
+      sprintf(buffStr, "%d", b);
 
       i++;
     }
@@ -164,6 +167,7 @@ int main(int argc, char **argv){
     }
   }
 
+  sprintf(id_str, "%d", id);
   sprintf(tmp_path, "%s/%d.id", common_path, id);
 
   // Checking if the .id file exists already and is in use by a different client
@@ -231,8 +235,35 @@ int main(int argc, char **argv){
         // A new file has been created
         if(strstr(event->name, ".id") != NULL)
         {
-          // The new file that was created is an .id file
-          printf("NEW %s\n", event->name);
+          // The new file that was created is an .id file so the two children are created
+          sender = fork();
+          if (sender < 0)
+          {
+            perror("Sender Fork Failed");
+            exit(2);
+          }
+          if (sender == 0)
+          {
+            execl("sender", "sender", common_path, id_str, event->name, buffStr, NULL);
+            perror("exec failed");
+            exit(2);
+          }
+
+          receiver = fork();
+          if (receiver < 0)
+          {
+            perror("Receiver Fork Failed");
+            exit(2);
+          }
+          if (receiver == 0)
+          {
+            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, NULL);
+            perror("exec failed");
+            exit(2);
+          }
+
+          wait(&status);
+          wait(&status);
         }
       }
       else if (event->mask & IN_DELETE)
