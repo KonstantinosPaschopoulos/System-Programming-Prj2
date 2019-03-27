@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include "client_functions.h"
 
 volatile sig_atomic_t flag = 1;
 
@@ -22,16 +23,17 @@ int main(int argc, char **argv){
   FILE *logfile = NULL, *idfile = NULL;
   static struct sigaction act;
 
-  // Setting the signal handler
+  // Setting up the signal handler
   act.sa_handler = catchinterrupt;
   sigfillset(&(act.sa_mask));
-  sigaction(SIGINT, &act, NULL);
-  sigaction(SIGQUIT, &act, NULL);
+  // TODO enable signals
+  // sigaction(SIGINT, &act, NULL);
+  // sigaction(SIGQUIT, &act, NULL);
 
   // Parsing the input from the command line
   if (argc != 13)
   {
-    printf("Correct use is: ./mirror_client -n id -c common_dir -i input_dir -m mirror_dir -b buffer_size -l log_file\n");
+    printf("Usage: ./mirror_client -n id -c common_dir -i input_dir -m mirror_dir -b buffer_size -l log_file\n");
     exit(1);
   }
   for (i = 1; i < argc; i++)
@@ -50,7 +52,6 @@ int main(int argc, char **argv){
       {
         if (errno == ENOENT)
         {
-          // Creating the directory if it doesn't exist
           if (mkdir(argv[i + 1], 0777) == -1)
           {
             perror("mkdir failed");
@@ -130,16 +131,17 @@ int main(int argc, char **argv){
     else if (strcmp(argv[i], "-l") == 0)
     {
       // Check if the logfile exists already
-      if (access(argv[i + 1], F_OK) != -1)
-      {
-        printf("The logfile already exists\n");
-        exit(1);
-      }
+      // TODO uncomment the following
+      // if (access(argv[i + 1], F_OK) != -1)
+      // {
+      //   printf("The logfile already exists\n");
+      //   exit(1);
+      // }
 
-      logfile = fopen(argv[i + 1], "a");
+      logfile = fopen(argv[i + 1], "w");
       if (logfile == NULL)
       {
-        perror("Couldn't open logfile");
+        perror("Couldn't create the logfile");
         exit(2);
       }
 
@@ -147,7 +149,7 @@ int main(int argc, char **argv){
     }
     else
     {
-      printf("Correct use is: ./mirror_client -n id -c common_dir -i input_dir -m mirror_dir -b buffer_size -l log_file\n");
+      printf("Usage: ./mirror_client -n id -c common_dir -i input_dir -m mirror_dir -b buffer_size -l log_file\n");
       exit(1);
     }
   }
@@ -169,12 +171,14 @@ int main(int argc, char **argv){
     exit(2);
   }
   fprintf(idfile, "%d", getpid());
+  fclose(idfile);
+
+  monitoring(common_path);
 
   closedir(mirror_dir);
   closedir(input_dir);
   closedir(common_dir);
   fclose(logfile);
-  fclose(idfile);
 
   return 0;
 }

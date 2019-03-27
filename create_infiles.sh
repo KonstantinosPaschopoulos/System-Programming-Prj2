@@ -34,14 +34,12 @@ echo Creating the directories:
 i=1
 # The external while loop counts how many directories have been created
 while [ $i -le $3 ]; do
-	path="$1/${dir_names[$i]}"
-	mkdir -p "$path"
-	echo "$path"
-	j=1
+	path="$1"
+	j=0
 	# The internal loop counts how many levels have been created
 	while [ $j -lt $4 ]; do
 		if [ $(( j+i )) -gt $(( $3+1 )) ]; then
-			exit 0
+			break
 		fi
 		path="${path}/${dir_names[i+j]}"
 		mkdir -p "$path"
@@ -54,7 +52,7 @@ done
 # Creating the file names
 echo
 for ((i=0; i < $2; i++)); do
-	# Deciding how long the name of each directory will be using shuf
+	# Deciding how long the name of each file will be using shuf
 	length=`shuf -i 1-8 -n 1`
 	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
 	# Storing the random alphanumeric string in an array
@@ -62,11 +60,35 @@ for ((i=0; i < $2; i++)); do
 	file_names[$i]="$tmp";
 done
 
-# # Distributing the files in a round-robin fashion
-# j=0
-# # The loop is used to traverse the file_names array
-# for ((i=0; i < $2; i++)); do
-#
-#
-# 	j=$(( j+1 ))
-# done
+echo
+echo Creating the files:
+y=0
+# The external while loop checks how many files have been created
+while [ $y -lt $2 ]; do
+	i=1
+	# Looping around the directories to achieve a round-robin distribution
+	while [ $i -le $3 ]; do
+		if [ $y -ge $2 ]; then
+			break
+		fi
+		path="$1"
+		touch "${path}/${file_names[y]}"
+		echo "${path}/${file_names[y]}"
+		y=$(( y+1 ))
+		j=0
+		while [ $j -lt $4 ]; do
+			if [ $(( j+i )) -gt $(( $3+1 )) ]; then
+				break
+			fi
+			if [ $y -ge $2 ]; then
+				break
+			fi
+			path="${path}/${dir_names[i+j]}"
+			touch "${path}/${file_names[y]}"
+			echo "${path}/${file_names[y]}"
+			y=$(( y+1 ))
+			j=$(( j+1 ))
+		done
+		i=$(( i+j ))
+	done
+done
