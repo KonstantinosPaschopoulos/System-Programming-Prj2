@@ -60,6 +60,7 @@ for ((i=0; i < $2; i++)); do
 	file_names[$i]="$tmp";
 done
 
+# TODO fill the files with data
 echo
 echo Creating the files:
 y=0

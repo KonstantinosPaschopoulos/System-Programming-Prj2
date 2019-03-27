@@ -1,3 +1,6 @@
+// The inotify code is based on the lectures of professor Alex Dellis
+// Source: http://cgi.di.uoa.gr/~ad/k22/index.html
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +10,10 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <signal.h>
-#include "client_functions.h"
+#include <sys/inotify.h>
+
+#define EVENT_SIZE (sizeof (struct inotify_event))
+#define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 50))
 
 volatile sig_atomic_t flag = 1;
 
@@ -17,6 +23,10 @@ void catchinterrupt(int signo){
 }
 
 int main(int argc, char **argv){
+  pid_t sender, receiver;
+  int inotifyFd, wd;
+  int length, read_ptr, read_offset;
+	char buffer[EVENT_BUF_LEN];
   int i, id, b;
   DIR *common_dir, *input_dir, *mirror_dir;
   char common_path[50], input_path[50], mirror_path[50], tmp_path[100];
@@ -26,7 +36,7 @@ int main(int argc, char **argv){
   // Setting up the signal handler
   act.sa_handler = catchinterrupt;
   sigfillset(&(act.sa_mask));
-  // TODO enable signals
+  // TODO add signals
   // sigaction(SIGINT, &act, NULL);
   // sigaction(SIGQUIT, &act, NULL);
 
@@ -173,7 +183,87 @@ int main(int argc, char **argv){
   fprintf(idfile, "%d", getpid());
   fclose(idfile);
 
-  monitoring(common_path);
+  // monitoring(common_path);
+  // Creating an inotify instance to monitor the common_dir
+  inotifyFd = inotify_init();
+  if (inotifyFd < 0)
+  {
+    perror("inotify init failed");
+    exit(2);
+  }
+
+  wd = inotify_add_watch(inotifyFd, common_path, IN_CREATE | IN_DELETE);
+  if (wd == -1)
+  {
+    perror("inotify_add_watch failed");
+    exit(2);
+  }
+
+  // The client is monitoring the common_dir periodically
+  // cheking for changes in the .id files
+  read_offset = 0;
+  while(1)  // TODO add signal flag
+  {
+    // Read next series of events
+		length = read(inotifyFd, buffer + read_offset, sizeof(buffer) - read_offset);
+		if (length < 0)
+    {
+      perror("inotify read failed");
+      exit(2);
+    }
+		length += read_offset;
+		read_ptr = 0;
+
+    // Proccessing each event
+    while ((read_ptr + EVENT_SIZE) <= length )
+    {
+			struct inotify_event *event = (struct inotify_event *) &buffer[read_ptr];
+
+			if ((read_ptr + EVENT_SIZE + event->len) > length)
+      {
+        // In this case we cannot fully read all event data and need to wait until the next read
+        break;
+      }
+
+			// In this case the event is fully received
+      if (event->mask & IN_CREATE)
+      {
+        // A new file has been created
+        if(strstr(event->name, ".id") != NULL)
+        {
+          // The new file that was created is an .id file
+          printf("NEW %s\n", event->name);
+        }
+      }
+      else if (event->mask & IN_DELETE)
+      {
+        // A file has been deleted
+        printf("DEL %s\n", event->name);
+      }
+
+			// Advance read_ptr to the beginning of the next event
+			read_ptr += EVENT_SIZE + event->len;
+		}
+
+    // Check to see if a partial event remains at the end
+		if(read_ptr < length)
+    {
+			// Copy the remaining bytes and signal the next read to begin immediatelly after them
+			memcpy(buffer, buffer + read_ptr, length - read_ptr);
+			read_offset = length - read_ptr;
+		}
+    else
+    {
+      read_offset = 0;
+    }
+
+    // T = 2
+    sleep(2);
+  }
+
+  // Closing the inotify instance
+  inotify_rm_watch(inotifyFd, wd);
+  close(inotifyFd);
 
   closedir(mirror_dir);
   closedir(input_dir);
