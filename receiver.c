@@ -14,7 +14,8 @@ int main(int argc, char **argv){
   char * id2;
   short nameLength;
   int fileLength;
-  char fifoName[100], fileName[100];
+  char fifoName[100];
+  char *fileName;
   int fifoFd, b, remaining;
   char *buffer;
 
@@ -62,8 +63,15 @@ int main(int argc, char **argv){
       break;
     }
 
+    fileName = (char*)malloc(nameLength * sizeof(char));
+    if (fileName == NULL)
+    {
+      perror("Malloc failed");
+      exit(2);
+    }
+
     // Reading the name of the file that is going to be transfered
-    if (read(fifoFd, &fileName, nameLength) == -1)
+    if (read(fifoFd, fileName, nameLength) == -1)
     {
       perror("Reading failed");
       exit(2);
@@ -102,6 +110,8 @@ int main(int argc, char **argv){
 
       remaining -= b;
     }
+
+    free(fileName);
   }
 
   if (close(fifoFd) == -1)
