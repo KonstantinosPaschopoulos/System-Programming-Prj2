@@ -74,8 +74,6 @@ void traverseInput(int fifoFd, char *input, int b){
 
   while ((ent = readdir(dir)) != NULL)
   {
-    sprintf(next_path, "%s/%s", input, ent->d_name); // TODO send the whole path
-
     if (ent->d_type == DT_DIR)
     {
       if ((strcmp(ent->d_name, ".") == 0) || (strcmp(ent->d_name, "..") == 0))
@@ -84,12 +82,15 @@ void traverseInput(int fifoFd, char *input, int b){
       }
 
       // We need to go deeper
+      sprintf(next_path, "%s/%s", input, ent->d_name);
       traverseInput(fifoFd, next_path, b);
     }
     else
     {
+      sprintf(next_path, "%s/%s", input, ent->d_name); // TODO send the whole path
+
       // Sending 2 bytes that declare the length of the file's name
-      nameLength = (short)strlen(ent->d_name);
+      nameLength = (short)strlen(next_path);
       if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
       {
         perror("Write failed");
@@ -97,7 +98,7 @@ void traverseInput(int fifoFd, char *input, int b){
       }
 
       // Sending the name of the file
-      if (write(fifoFd, &(ent->d_name), nameLength) == -1)
+      if (write(fifoFd, next_path, nameLength) == -1)
       {
         perror("Write failed");
         exit(2);

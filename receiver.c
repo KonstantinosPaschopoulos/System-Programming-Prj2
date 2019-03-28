@@ -63,10 +63,10 @@ int main(int argc, char **argv){
       break;
     }
 
-    fileName = (char*)malloc(nameLength * sizeof(char));
+    fileName = (char*)calloc(nameLength, sizeof(char));
     if (fileName == NULL)
     {
-      perror("Malloc failed");
+      perror("Calloc failed");
       exit(2);
     }
 
@@ -86,7 +86,7 @@ int main(int argc, char **argv){
 
     // Reading the file using a buffer of b bytes
     remaining = fileLength;
-    printf("THERE %s %d\n", fileName, fileLength);
+    printf("THERE %s %d\n", fileName, nameLength);
     while (remaining > 0)
     {
       if (remaining > b)
@@ -106,7 +106,7 @@ int main(int argc, char **argv){
         }
       }
 
-      printf("BUFFER %s\n", buffer);
+      // TODO write buffer to file
 
       remaining -= b;
     }
