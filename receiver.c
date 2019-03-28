@@ -75,16 +75,15 @@ int main(int argc, char **argv){
       perror("Reading failed");
       exit(2);
     }
-    printf("THERE %s %d\n", fileName, fileLength);
 
     // Reading the file using a buffer of b bytes
-    /*
     remaining = fileLength;
+    printf("THERE %s %d\n", fileName, fileLength);
     while (remaining > 0)
     {
       if (remaining > b)
       {
-        if (read(fifoFd, &buffer, b) == -1)
+        if (read(fifoFd, buffer, b) == -1)
         {
           perror("Reading failed");
           exit(2);
@@ -92,7 +91,7 @@ int main(int argc, char **argv){
       }
       else
       {
-        if (read(fifoFd, &buffer, remaining) == -1)
+        if (read(fifoFd, buffer, remaining) == -1)
         {
           perror("Reading failed");
           exit(2);
@@ -103,7 +102,6 @@ int main(int argc, char **argv){
 
       remaining -= b;
     }
-    */
   }
 
   if (close(fifoFd) == -1)

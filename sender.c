@@ -61,8 +61,9 @@ void traverseInput(int fifoFd, char *input, int b){
   struct dirent *ent;
   char next_path[300];
   short nameLength;
-  int fileLength;
+  int fileLength, n;
   FILE* fp;
+  char *buffer;
 
   dir = opendir(input);
   if (dir == NULL)
@@ -117,22 +118,30 @@ void traverseInput(int fifoFd, char *input, int b){
         perror("Write failed");
         exit(2);
       }
-      printf("HERE%d\n", fileLength);
 
       fseek(fp, 0L, SEEK_SET);
 
-      // Sending the file in b sized chunks
-      // while(fileLength > 0)
-      // {
-      //   if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
-      //   {
-      //     perror("Write failed");
-      //     exit(2);
-      //   }
-      //   fileLength -= b;
-      // }
+      buffer = (char*)malloc(b * sizeof(char));
+      if (buffer == NULL)
+      {
+        perror("Malloc failed");
+        exit(2);
+      }
+
+      // Using fgets to read b bytes and send them through the named pipe
+      while ((n = fread(buffer, sizeof(char), b, fp)) > 0)
+      {
+        // buffer[n] = '\0';
+        printf("HERE %s %d\n", buffer, n);
+        if (write(fifoFd, buffer, n) == -1)
+        {
+          perror("Write failed");
+          exit(2);
+        }
+      }
 
       fclose(fp);
+      free(buffer);
     }
   }
 
