@@ -25,15 +25,15 @@ void catchinterrupt(int signo){
 
 int main(int argc, char **argv){
   pid_t sender, receiver;
-  int inotifyFd, wd;
-  int length, read_ptr, read_offset;
+  int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
 	char buffer[EVENT_BUF_LEN];
-  int i, id, b, status;
   DIR *common_dir, *input_dir, *mirror_dir;
-  char id_str[100], buffStr[100];
+  char id_str[100], buffStr[100], id_file[100];
   char common_path[50], input_path[50], mirror_path[50], tmp_path[100];
   FILE *logfile = NULL, *idfile = NULL;
   static struct sigaction act;
+  DIR *dir;
+  struct dirent *ent;
 
   // Setting up the signal handler
   act.sa_handler = catchinterrupt;
@@ -187,7 +187,56 @@ int main(int argc, char **argv){
   fprintf(idfile, "%d", getpid());
   fclose(idfile);
 
-  // monitoring(common_path);
+  // Doing the initial sync
+  sprintf(id_file, "%d.id", id);
+  dir = opendir(common_path);
+  if (dir == NULL)
+  {
+    perror("Could not open input directory");
+    exit(2);
+  }
+  while ((ent = readdir(dir)) != NULL)
+  {
+    if (ent->d_type == DT_DIR)
+    {
+      continue;
+    }
+    else
+    {
+      if ((strstr(ent->d_name, ".id") != NULL) && strcmp(ent->d_name, id_file) != 0)
+      {
+        sender = fork();
+        if (sender < 0)
+        {
+          perror("Sender Fork Failed");
+          exit(2);
+        }
+        if (sender == 0)
+        {
+          execl("sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, NULL);
+          perror("exec failed");
+          exit(2);
+        }
+
+        receiver = fork();
+        if (receiver < 0)
+        {
+          perror("Receiver Fork Failed");
+          exit(2);
+        }
+        if (receiver == 0)
+        {
+          execl("receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, NULL);
+          perror("exec failed");
+          exit(2);
+        }
+
+        wait(&status);
+        wait(&status);
+      }
+    }
+  }
+
   // Creating an inotify instance to monitor the common_dir
   inotifyFd = inotify_init();
   if (inotifyFd < 0)
@@ -195,7 +244,6 @@ int main(int argc, char **argv){
     perror("inotify init failed");
     exit(2);
   }
-
   wd = inotify_add_watch(inotifyFd, common_path, IN_CREATE | IN_DELETE);
   if (wd == -1)
   {
@@ -208,6 +256,7 @@ int main(int argc, char **argv){
   read_offset = 0;
   while(1)  // TODO add signal flag
   {
+    printf("WAITING FOR CLIENTS\n");
     // Read next series of events
 		length = read(inotifyFd, buffer + read_offset, sizeof(buffer) - read_offset);
 		if (length < 0)
@@ -233,7 +282,7 @@ int main(int argc, char **argv){
       if (event->mask & IN_CREATE)
       {
         // A new file has been created
-        if(strstr(event->name, ".id") != NULL)
+        if (strstr(event->name, ".id") != NULL)
         {
           // The new file that was created is an .id file so the two children are created
           sender = fork();
@@ -244,7 +293,7 @@ int main(int argc, char **argv){
           }
           if (sender == 0)
           {
-            execl("sender", "sender", common_path, id_str, event->name, buffStr, NULL);
+            execl("sender", "sender", common_path, id_str, event->name, buffStr, input_path, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -257,7 +306,7 @@ int main(int argc, char **argv){
           }
           if (receiver == 0)
           {
-            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, NULL);
+            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -269,7 +318,10 @@ int main(int argc, char **argv){
       else if (event->mask & IN_DELETE)
       {
         // A file has been deleted
-        printf("DEL %s\n", event->name);
+        if (strstr(event->name, ".id") != NULL)
+        {
+          printf("DEL %s\n", event->name);
+        }
       }
 
 			// Advance read_ptr to the beginning of the next event
@@ -296,9 +348,26 @@ int main(int argc, char **argv){
   inotify_rm_watch(inotifyFd, wd);
   close(inotifyFd);
 
-  closedir(mirror_dir);
-  closedir(input_dir);
-  closedir(common_dir);
+  if (closedir(mirror_dir) == -1)
+  {
+    perror("Closing the mirror directory failed");
+    exit(2);
+  }
+  if (closedir(input_dir) == -1)
+  {
+    perror("Closing the input directory failed");
+    exit(2);
+  }
+  if (closedir(common_dir) == -1)
+  {
+    perror("Closing the common directory failed");
+    exit(2);
+  }
+  if (closedir(dir) == -1)
+  {
+    perror("Closing the common directory failed");
+    exit(2);
+  }
   fclose(logfile);
 
   return 0;
