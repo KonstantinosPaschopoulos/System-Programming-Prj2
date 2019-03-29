@@ -61,7 +61,7 @@ void traverseInput(int fifoFd, char *input, int b){
   struct dirent *ent;
   char next_path[300];
   short nameLength;
-  int fileLength, n;
+  int fileLength, n, dir_or_not;
   FILE* fp;
   char *buffer;
 
@@ -74,6 +74,7 @@ void traverseInput(int fifoFd, char *input, int b){
 
   while ((ent = readdir(dir)) != NULL)
   {
+    sprintf(next_path, "%s/%s", input, ent->d_name);
     if (ent->d_type == DT_DIR)
     {
       if ((strcmp(ent->d_name, ".") == 0) || (strcmp(ent->d_name, "..") == 0))
@@ -81,14 +82,34 @@ void traverseInput(int fifoFd, char *input, int b){
         continue;
       }
 
+      // Sending 2 bytes that declare the length of the directory's name
+      nameLength = (short)strlen(next_path);
+      if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
+      {
+        perror("Write failed");
+        exit(2);
+      }
+
+      // Sending the name of the directory
+      if (write(fifoFd, next_path, nameLength) == -1)
+      {
+        perror("Write failed");
+        exit(2);
+      }
+
+      // Sending an integer that represents if it is a regular file or a directory
+      dir_or_not = 1;
+      if (write(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
+      {
+        perror("Write failed");
+        exit(2);
+      }
+
       // We need to go deeper
-      sprintf(next_path, "%s/%s", input, ent->d_name);
       traverseInput(fifoFd, next_path, b);
     }
     else
     {
-      sprintf(next_path, "%s/%s", input, ent->d_name); // TODO send the whole path
-
       // Sending 2 bytes that declare the length of the file's name
       nameLength = (short)strlen(next_path);
       if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
@@ -99,6 +120,14 @@ void traverseInput(int fifoFd, char *input, int b){
 
       // Sending the name of the file
       if (write(fifoFd, next_path, nameLength) == -1)
+      {
+        perror("Write failed");
+        exit(2);
+      }
+
+      // Sending an integer that represents if it is a regular file or a directory
+      dir_or_not = 0;
+      if (write(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
       {
         perror("Write failed");
         exit(2);
@@ -122,23 +151,23 @@ void traverseInput(int fifoFd, char *input, int b){
 
       fseek(fp, 0L, SEEK_SET);
 
-      buffer = (char*)malloc(b * sizeof(char));
+      buffer = (char*)calloc(b, sizeof(char));
       if (buffer == NULL)
       {
-        perror("Malloc failed");
+        perror("Calloc failed");
         exit(2);
       }
 
       // Using fgets to read b bytes and send them through the named pipe
       while ((n = fread(buffer, sizeof(char), b, fp)) > 0)
       {
-        // buffer[n] = '\0';
-        printf("HERE %s %d\n", buffer, n);
         if (write(fifoFd, buffer, n) == -1)
         {
           perror("Write failed");
           exit(2);
         }
+
+        memset(buffer, 0, b);
       }
 
       fclose(fp);

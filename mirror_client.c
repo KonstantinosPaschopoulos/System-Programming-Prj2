@@ -76,6 +76,11 @@ int main(int argc, char **argv){
           exit(2);
         }
       }
+      if (closedir(common_dir) == -1)
+      {
+        perror("Closing the common directory failed");
+        exit(2);
+      }
 
       i++;
     }
@@ -107,7 +112,11 @@ int main(int argc, char **argv){
       strcpy(mirror_path, argv[i + 1]);
       if (mirror_dir)
       {
-        closedir(mirror_dir);
+        if (closedir(mirror_dir) == -1)
+        {
+          perror("Closing the mirror directory failed");
+          exit(2);
+        }
         printf("mirror_dir already exists\n");
         exit(1);
       }
@@ -120,6 +129,11 @@ int main(int argc, char **argv){
           exit(2);
         }
         mirror_dir = opendir(argv[i + 1]);
+        if (closedir(mirror_dir) == -1)
+        {
+          perror("Closing the mirror directory failed");
+          exit(2);
+        }
       }
       else
       {
@@ -348,19 +362,9 @@ int main(int argc, char **argv){
   inotify_rm_watch(inotifyFd, wd);
   close(inotifyFd);
 
-  if (closedir(mirror_dir) == -1)
-  {
-    perror("Closing the mirror directory failed");
-    exit(2);
-  }
   if (closedir(input_dir) == -1)
   {
     perror("Closing the input directory failed");
-    exit(2);
-  }
-  if (closedir(common_dir) == -1)
-  {
-    perror("Closing the common directory failed");
     exit(2);
   }
   if (closedir(dir) == -1)
