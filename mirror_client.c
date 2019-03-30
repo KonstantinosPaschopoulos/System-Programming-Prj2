@@ -12,24 +12,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/inotify.h>
-
-#define EVENT_SIZE (sizeof (struct inotify_event))
-#define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 50))
-
-void write_to_logfile(char *log, char *message){
-  FILE *logfile = NULL;
-
-  logfile = fopen(log, "a");
-  if (logfile == NULL)
-  {
-    perror("Couldn't append to the logfile");
-    exit(-1);
-  }
-
-  fprintf(logfile, "%s\n", message);
-
-  fclose(logfile);
-}
+#include "my_functions.h"
 
 volatile sig_atomic_t flag = 1;
 

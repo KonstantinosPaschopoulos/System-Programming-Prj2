@@ -8,21 +8,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <fcntl.h>
-
-void write_to_logfile(char *log, char *message){
-  FILE *logfile = NULL;
-
-  logfile = fopen(log, "a");
-  if (logfile == NULL)
-  {
-    perror("Couldn't append to the logfile");
-    exit(-1);
-  }
-
-  fprintf(logfile, "%s\n", message);
-
-  fclose(logfile);
-}
+#include "my_functions.h"
 
 // Usage: common_dir, id1, id2.id, buffer size, mirror_dir, logfile
 int main(int argc, char **argv){
