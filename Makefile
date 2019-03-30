@@ -3,7 +3,8 @@ CFLAGS=  -c -Wall
 
 all:    mirror_client \
 	sender \
-	receiver
+	receiver \
+	deleter
 
 mirror_client:   mirror_client.c
 	$(CC)  $(CFLAGS) mirror_client.c
@@ -17,8 +18,13 @@ receiver:   receiver.c
 	$(CC)  $(CFLAGS) receiver.c
 	$(CC)  receiver.o -o receiver
 
+deleter:   deleter.c
+	$(CC)  $(CFLAGS) deleter.c
+	$(CC)  deleter.o -o deleter
+
 clean:
 	rm -f   \
 		mirror_client.o mirror_client \
 		sender.o sender \
-		receiver.o receiver
+		receiver.o receiver \
+		deleter.o deleter

@@ -39,7 +39,7 @@ void catchinterrupt(int signo){
 }
 
 int main(int argc, char **argv){
-  pid_t sender, receiver;
+  pid_t sender, receiver, deleter;
   int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
 	char buffer[EVENT_BUF_LEN];
   DIR *common_dir, *input_dir, *mirror_dir;
@@ -231,7 +231,7 @@ int main(int argc, char **argv){
     }
     else
     {
-      if ((strstr(ent->d_name, ".id") != NULL) && strcmp(ent->d_name, id_file) != 0)
+      if ((strstr(ent->d_name, ".id") != NULL) && (strcmp(ent->d_name, id_file) != 0))
       {
         sender = fork();
         if (sender < 0)
@@ -384,9 +384,23 @@ int main(int argc, char **argv){
       else if (event->mask & IN_DELETE)
       {
         // A file has been deleted
-        if (strstr(event->name, ".id") != NULL)
+        if ((strstr(event->name, ".id") != NULL) && (strcmp(event->name, id_file) != 0))
         {
-          printf("DEL %s\n", event->name);
+          // The new that was deleted is an .id file
+          deleter = fork();
+          if (deleter < 0)
+          {
+            perror("Deleter Fork Failed");
+            exit(2);
+          }
+          if (deleter == 0)
+          {
+            execl("deleter", "deleter", mirror_path, event->name, NULL);
+            perror("exec failed");
+            exit(2);
+          }
+
+          wait(&status);
         }
       }
 
@@ -405,9 +419,6 @@ int main(int argc, char **argv){
     {
       read_offset = 0;
     }
-
-    // T = 2
-    sleep(2);
   }
 
   // Closing the inotify instance
