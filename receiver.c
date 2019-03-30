@@ -198,5 +198,5 @@ int main(int argc, char **argv){
   }
   free(buffer);
 
-  exit(0);
+  return 12;
 }

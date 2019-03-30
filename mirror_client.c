@@ -259,8 +259,28 @@ int main(int argc, char **argv){
           exit(2);
         }
 
-        wait(&status);
-        wait(&status);
+        if (wait(&status) > 0)
+        {
+          if (WIFEXITED(status))
+          {
+            // They return 12 if everything went normally
+            if (WEXITSTATUS(status) == 12)
+            {
+              printf("Transfer is complete\n");
+            }
+          }
+        }
+        if (wait(&status) > 0)
+        {
+          if (WIFEXITED(status))
+          {
+            // They return 12 if everything went normally
+            if (WEXITSTATUS(status) == 12)
+            {
+              printf("Transfer is complete\n");
+            }
+          }
+        }
       }
     }
   }
@@ -337,8 +357,28 @@ int main(int argc, char **argv){
             exit(2);
           }
 
-          wait(&status);
-          wait(&status);
+          if (wait(&status) > 0)
+          {
+            if (WIFEXITED(status))
+            {
+              // They return 12 if everything went normally
+              if (WEXITSTATUS(status) == 12)
+              {
+                printf("Transfer is complete\n");
+              }
+            }
+          }
+          if (wait(&status) > 0)
+          {
+            if (WIFEXITED(status))
+            {
+              // They return 12 if everything went normally
+              if (WEXITSTATUS(status) == 12)
+              {
+                printf("Transfer is complete\n");
+              }
+            }
+          }
         }
       }
       else if (event->mask & IN_DELETE)

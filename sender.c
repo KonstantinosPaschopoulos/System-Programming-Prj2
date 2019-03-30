@@ -69,7 +69,7 @@ int main(int argc, char **argv){
     exit(2);
   }
 
-  exit(0);
+  return 12;
 }
 
 void traverseInput(int fifoFd, char *input, int b, char *log){
