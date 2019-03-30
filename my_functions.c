@@ -12,7 +12,7 @@ void write_to_logfile(char *log, char *message){
     exit(2);
   }
 
-  fprintf(logfile, "%s\n", message);
+  fprintf(logfile, "%s", message);
 
   fclose(logfile);
 }

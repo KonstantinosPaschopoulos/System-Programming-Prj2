@@ -1,10 +1,50 @@
 #!/bin/bash
+
+# A function that returns random alphanumeric strings
+function randomString()
+{
+	# These are the characters that are allowed to be in the name and the length of the set
+	local setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	local len=${#setOfCharacters}
+	len=$(( len-1 ))
+
+	# Create a random number in every loop and add the character that it corresponds to
+	str=""
+	for ((i=0; i < $1; i++)); do
+		num=`shuf -i 0-${len} -n 1`
+		tmp=${setOfCharacters:$num:1}
+		str="${str}${tmp}"
+	done
+
+	echo "$str"
+}
+
 declare -a dir_names
 declare -a file_names
 
 # Checks the number of arguments
 if [ $# -ne 4 ]; then
 	echo Correct use: ./create_infiles.sh dir_name num_of_files num_of_dirs levels
+	exit 1
+fi
+
+# Check if the rest of the arguments are non negative numbers
+if [[ $2 != *[!0-9]* ]]; then
+	echo -n
+else
+	echo $2 is not an acceptable number
+	exit 1
+fi
+if [[ $3 != *[!0-9]* ]]; then
+	echo -n
+else
+	echo $3 is not an acceptable number
+	exit 1
+fi
+if [[ $4 != *[!0-9]* ]]; then
+	echo -n
+else
+	echo $4 is not an acceptable number
 	exit 1
 fi
 
@@ -24,7 +64,8 @@ dir_names[0]="$1";
 for ((i=1; i <= $3; i++)); do
 	# Deciding how long the name of each directory will be using shuf
 	length=`shuf -i 1-8 -n 1`
-	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
+	# tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
+	tmp=$(randomString $length)
 	# Storing the random alphanumeric string in an array
 	dir_names[$i]="$tmp";
 done
@@ -54,7 +95,8 @@ echo
 for ((i=0; i < $2; i++)); do
 	# Deciding how long the name of each file will be using shuf
 	length=`shuf -i 1-8 -n 1`
-	tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
+	# tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
+	tmp=$(randomString $length)
 	# Storing the random alphanumeric string in an array
 	echo "$tmp"
 	file_names[$i]="$tmp";
