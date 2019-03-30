@@ -9,17 +9,32 @@
 #include <signal.h>
 #include <fcntl.h>
 
-// Usage: common_dir, id1, id2.id, buffer size, mirror_dir
+void write_to_logfile(char *log, char *message){
+  FILE *logfile = NULL;
+
+  logfile = fopen(log, "a");
+  if (logfile == NULL)
+  {
+    perror("Couldn't append to the logfile");
+    exit(-1);
+  }
+
+  fprintf(logfile, "%s\n", message);
+
+  fclose(logfile);
+}
+
+// Usage: common_dir, id1, id2.id, buffer size, mirror_dir, logfile
 int main(int argc, char **argv){
   char * id2;
   short nameLength;
   int fileLength;
-  char fifoName[100], path[300], tmp_path[300];
+  char fifoName[100], path[300], tmp_path[300], message[100];
   char *fileName;
   int fifoFd, b, remaining, dir_or_not;
   char *buffer;
   char *tmp;
-  FILE *fp;
+  FILE *fp = NULL;
 
   id2 = strtok(argv[3], ".");
   b = atoi(argv[4]);
@@ -160,6 +175,12 @@ int main(int argc, char **argv){
 
       remaining -= b;
     }
+
+    // Writing to the logfile
+    sprintf(message, "FILE_RECEIVED %s\n", path);
+    write_to_logfile(argv[6], message);
+    sprintf(message, "BYTES_RECEIVED %d\n", fileLength);
+    write_to_logfile(argv[6], message);
 
     free(fileName);
     fclose(fp);

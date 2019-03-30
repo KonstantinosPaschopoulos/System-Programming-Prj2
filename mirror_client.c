@@ -16,6 +16,21 @@
 #define EVENT_SIZE (sizeof (struct inotify_event))
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 50))
 
+void write_to_logfile(char *log, char *message){
+  FILE *logfile = NULL;
+
+  logfile = fopen(log, "a");
+  if (logfile == NULL)
+  {
+    perror("Couldn't append to the logfile");
+    exit(-1);
+  }
+
+  fprintf(logfile, "%s\n", message);
+
+  fclose(logfile);
+}
+
 volatile sig_atomic_t flag = 1;
 
 void catchinterrupt(int signo){
@@ -28,8 +43,8 @@ int main(int argc, char **argv){
   int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
 	char buffer[EVENT_BUF_LEN];
   DIR *common_dir, *input_dir, *mirror_dir;
-  char id_str[100], buffStr[100], id_file[100];
-  char common_path[50], input_path[50], mirror_path[50], tmp_path[100];
+  char id_str[100], buffStr[100], id_file[100], message[100];
+  char common_path[50], input_path[50], mirror_path[50], tmp_path[100], logfile_name[50];
   FILE *logfile = NULL, *idfile = NULL;
   static struct sigaction act;
   DIR *dir;
@@ -158,19 +173,20 @@ int main(int argc, char **argv){
     else if (strcmp(argv[i], "-l") == 0)
     {
       // Check if the logfile exists already
-      // TODO uncomment the following
-      // if (access(argv[i + 1], F_OK) != -1)
-      // {
-      //   printf("The logfile already exists\n");
-      //   exit(1);
-      // }
+      if (access(argv[i + 1], F_OK) != -1)
+      {
+        printf("The logfile already exists\n");
+        exit(1);
+      }
 
+      strcpy(logfile_name, argv[i + 1]);
       logfile = fopen(argv[i + 1], "w");
       if (logfile == NULL)
       {
         perror("Couldn't create the logfile");
         exit(2);
       }
+      fclose(logfile);
 
       i++;
     }
@@ -201,6 +217,9 @@ int main(int argc, char **argv){
   fprintf(idfile, "%d", getpid());
   fclose(idfile);
 
+  sprintf(message, "CLIENT_CONNECTED %d\n", id);
+  write_to_logfile(logfile_name, message);
+
   // Doing the initial sync
   sprintf(id_file, "%d.id", id);
   dir = opendir(common_path);
@@ -227,7 +246,7 @@ int main(int argc, char **argv){
         }
         if (sender == 0)
         {
-          execl("sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, NULL);
+          execl("sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, logfile_name, NULL);
           perror("exec failed");
           exit(2);
         }
@@ -240,7 +259,7 @@ int main(int argc, char **argv){
         }
         if (receiver == 0)
         {
-          execl("receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, NULL);
+          execl("receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, logfile_name, NULL);
           perror("exec failed");
           exit(2);
         }
@@ -265,12 +284,10 @@ int main(int argc, char **argv){
     exit(2);
   }
 
-  // The client is monitoring the common_dir periodically
-  // cheking for changes in the .id files
+  // The client is monitoring the common_dir only cheking for changes in the .id files
   read_offset = 0;
   while(1)  // TODO add signal flag
   {
-    printf("WAITING FOR CLIENTS\n");
     // Read next series of events
 		length = read(inotifyFd, buffer + read_offset, sizeof(buffer) - read_offset);
 		if (length < 0)
@@ -282,11 +299,11 @@ int main(int argc, char **argv){
 		read_ptr = 0;
 
     // Proccessing each event
-    while ((read_ptr + EVENT_SIZE) <= length )
+    while ((int)(read_ptr + EVENT_SIZE) <= length )
     {
 			struct inotify_event *event = (struct inotify_event *) &buffer[read_ptr];
 
-			if ((read_ptr + EVENT_SIZE + event->len) > length)
+			if ((int)(read_ptr + EVENT_SIZE + event->len) > length)
       {
         // In this case we cannot fully read all event data and need to wait until the next read
         break;
@@ -307,7 +324,7 @@ int main(int argc, char **argv){
           }
           if (sender == 0)
           {
-            execl("sender", "sender", common_path, id_str, event->name, buffStr, input_path, NULL);
+            execl("sender", "sender", common_path, id_str, event->name, buffStr, input_path, logfile_name, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -320,7 +337,7 @@ int main(int argc, char **argv){
           }
           if (receiver == 0)
           {
-            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, NULL);
+            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, logfile_name, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -362,6 +379,9 @@ int main(int argc, char **argv){
   inotify_rm_watch(inotifyFd, wd);
   close(inotifyFd);
 
+  sprintf(message, "CLIENT_DISCONNECTED %d\n", id);
+  write_to_logfile(argv[6], message);
+
   if (closedir(input_dir) == -1)
   {
     perror("Closing the input directory failed");
@@ -372,7 +392,6 @@ int main(int argc, char **argv){
     perror("Closing the common directory failed");
     exit(2);
   }
-  fclose(logfile);
 
   return 0;
 }

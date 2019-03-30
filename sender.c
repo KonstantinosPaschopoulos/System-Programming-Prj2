@@ -9,16 +9,31 @@
 #include <signal.h>
 #include <fcntl.h>
 
-void traverseInput(int, char *, int);
+void write_to_logfile(char *log, char *message){
+  FILE *logfile = NULL;
 
-// Usage: common_dir, id1, id2.id, buffer size, input_dir
+  logfile = fopen(log, "a");
+  if (logfile == NULL)
+  {
+    perror("Couldn't append to the logfile");
+    exit(-1);
+  }
+
+  fprintf(logfile, "%s\n", message);
+
+  fclose(logfile);
+}
+
+void traverseInput(int, char *, int, char *);
+
+// Usage: common_dir, id1, id2.id, buffer size, input_dir, logfile
 int main(int argc, char **argv){
   char * id2;
   char fifoName[100];
   int fifoFd;
+  short nameLength;
 
   id2 = strtok(argv[3], ".");
-
   sprintf(fifoName, "%s/%s_to_%s.fifo", argv[1], argv[2], id2);
 
   //Creating the pipe to communicate with the receiver process
@@ -38,9 +53,10 @@ int main(int argc, char **argv){
     exit(2);
   }
 
-  traverseInput(fifoFd, argv[5], atoi(argv[4]));
+  traverseInput(fifoFd, argv[5], atoi(argv[4]), argv[6]);
 
-  short nameLength = (short)00;
+  // Sending 00 to signal that the transfer is done
+  nameLength = (short)00;
   if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
   {
     perror("Write failed");
@@ -56,13 +72,13 @@ int main(int argc, char **argv){
   exit(0);
 }
 
-void traverseInput(int fifoFd, char *input, int b){
+void traverseInput(int fifoFd, char *input, int b, char *log){
   DIR *dir;
   struct dirent *ent;
-  char next_path[300];
+  char next_path[300], message[100];
   short nameLength;
   int fileLength, n, dir_or_not;
-  FILE* fp;
+  FILE* fp = NULL;
   char *buffer;
 
   dir = opendir(input);
@@ -106,7 +122,7 @@ void traverseInput(int fifoFd, char *input, int b){
       }
 
       // We need to go deeper
-      traverseInput(fifoFd, next_path, b);
+      traverseInput(fifoFd, next_path, b, log);
     }
     else
     {
@@ -169,6 +185,11 @@ void traverseInput(int fifoFd, char *input, int b){
 
         memset(buffer, 0, b);
       }
+
+      sprintf(message, "FILE_SENT %s\n", next_path);
+      write_to_logfile(log, message);
+      sprintf(message, "BYTES_SENT %d\n", fileLength);
+      write_to_logfile(log, message);
 
       fclose(fp);
       free(buffer);
