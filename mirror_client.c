@@ -91,11 +91,6 @@ int main(int argc, char **argv){
           exit(2);
         }
       }
-      if (closedir(common_dir) == -1)
-      {
-        perror("Closing the common directory failed");
-        exit(2);
-      }
 
       i++;
     }
@@ -388,6 +383,11 @@ int main(int argc, char **argv){
     exit(2);
   }
   if (closedir(dir) == -1)
+  {
+    perror("Closing the common directory failed");
+    exit(2);
+  }
+  if (closedir(common_dir) == -1)
   {
     perror("Closing the common directory failed");
     exit(2);
