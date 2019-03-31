@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# A function that returns random alphanumeric strings
+# The onyl characters that are allowed to be in the names and inside the files
+setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+# A function that returns random alphanumeric strings of specified length
 function randomString()
 {
-	# These are the characters that are allowed to be in the name and the length of the set
-	local setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	local len=${#setOfCharacters}
 	len=$(( len-1 ))
 
@@ -12,7 +13,7 @@ function randomString()
 	str=""
 	for ((i=0; i < $1; i++)); do
 		num=`shuf -i 0-${len} -n 1`
-		tmp=${setOfCharacters:$num:1}
+		tmp="${setOfCharacters:$num:1}"
 		str="${str}${tmp}"
 	done
 
@@ -64,7 +65,6 @@ dir_names[0]="$1";
 for ((i=1; i <= $3; i++)); do
 	# Deciding how long the name of each directory will be using shuf
 	length=`shuf -i 1-8 -n 1`
-	# tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
 	tmp=$(randomString $length)
 	# Storing the random alphanumeric string in an array
 	dir_names[$i]="$tmp";
@@ -91,18 +91,14 @@ while [ $i -le $3 ]; do
 done
 
 # Creating the file names
-echo
 for ((i=0; i < $2; i++)); do
 	# Deciding how long the name of each file will be using shuf
 	length=`shuf -i 1-8 -n 1`
-	# tmp=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c $length`
 	tmp=$(randomString $length)
 	# Storing the random alphanumeric string in an array
-	echo "$tmp"
 	file_names[$i]="$tmp";
 done
 
-# TODO fill the files with data
 echo
 echo Creating the files:
 y=0
@@ -116,6 +112,9 @@ while [ $y -lt $2 ]; do
 		fi
 		path="$1"
 		touch "${path}/${file_names[y]}"
+		# Choosing a random number between 1kb and 128kb
+		length=`shuf -i 1024-131072 -n 1`
+		< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
 		echo "${path}/${file_names[y]}"
 		y=$(( y+1 ))
 		j=0
@@ -128,6 +127,9 @@ while [ $y -lt $2 ]; do
 			fi
 			path="${path}/${dir_names[i+j]}"
 			touch "${path}/${file_names[y]}"
+			# Choosing a random number between 1kb and 128kb
+			length=`shuf -i 1024-131072 -n 1`
+			< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
 			echo "${path}/${file_names[y]}"
 			y=$(( y+1 ))
 			j=$(( j+1 ))
