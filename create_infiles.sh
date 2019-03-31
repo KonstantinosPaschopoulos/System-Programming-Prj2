@@ -30,19 +30,19 @@ if [ $# -ne 4 ]; then
 fi
 
 # Check if the rest of the arguments are non negative numbers
-if [[ $2 != *[!0-9]* ]]; then
+if [ $2 -ge 0 ]; then
 	echo -n
 else
 	echo $2 is not an acceptable number
 	exit 1
 fi
-if [[ $3 != *[!0-9]* ]]; then
+if [ $3 -ge 0 ]; then
 	echo -n
 else
 	echo $3 is not an acceptable number
 	exit 1
 fi
-if [[ $4 != *[!0-9]* ]]; then
+if [ $4 -ge 0 ]; then
 	echo -n
 else
 	echo $4 is not an acceptable number
@@ -72,23 +72,25 @@ done
 
 # Creating the num_of_dirs directories
 echo Creating the directories:
-i=1
-# The external while loop counts how many directories have been created
-while [ $i -le $3 ]; do
-	path="$1"
-	j=0
-	# The internal loop counts how many levels have been created
-	while [ $j -lt $4 ]; do
-		if [ $(( j+i )) -gt $(( $3+1 )) ]; then
-			break
-		fi
-		path="${path}/${dir_names[i+j]}"
-		mkdir -p "$path"
-		echo "$path"
-		j=$(( j+1 ))
+if [ $4 -ge 1 ]; then
+	i=1
+	# The external while loop counts how many directories have been created
+	while [ $i -le $3 ]; do
+		path="$1"
+		j=0
+		# The internal loop counts how many levels have been created
+		while [ $j -lt $4 ]; do
+			if [ $(( j+i )) -gt $(( $3+1 )) ]; then
+				break
+			fi
+			path="${path}/${dir_names[i+j]}"
+			mkdir -p "$path"
+			echo "$path"
+			j=$(( j+1 ))
+		done
+		i=$(( i+j ))
 	done
-	i=$(( i+j ))
-done
+fi
 
 # Creating the file names
 for ((i=0; i < $2; i++)); do
@@ -104,12 +106,8 @@ echo Creating the files:
 y=0
 # The external while loop checks how many files have been created
 while [ $y -lt $2 ]; do
-	i=1
-	# Looping around the directories to achieve a round-robin distribution
-	while [ $i -le $3 ]; do
-		if [ $y -ge $2 ]; then
-			break
-		fi
+	if [ $3 -eq 0 ]; then
+		# In the case that no directories have been created everything goes in the dir_name
 		path="$1"
 		touch "${path}/${file_names[y]}"
 		# Choosing a random number between 1kb and 128kb
@@ -117,23 +115,38 @@ while [ $y -lt $2 ]; do
 		< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
 		echo "${path}/${file_names[y]}"
 		y=$(( y+1 ))
-		j=0
-		while [ $j -lt $4 ]; do
-			if [ $(( j+i )) -gt $(( $3+1 )) ]; then
-				break
-			fi
+	else
+		i=1
+		# Looping around the directories to achieve a round-robin distribution
+		while [ $i -le $3 ]; do
 			if [ $y -ge $2 ]; then
 				break
 			fi
-			path="${path}/${dir_names[i+j]}"
+			path="$1"
 			touch "${path}/${file_names[y]}"
 			# Choosing a random number between 1kb and 128kb
 			length=`shuf -i 1024-131072 -n 1`
 			< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
 			echo "${path}/${file_names[y]}"
 			y=$(( y+1 ))
-			j=$(( j+1 ))
+			j=0
+			while [ $j -lt $4 ]; do
+				if [ $(( j+i )) -gt $(( $3+1 )) ]; then
+					break
+				fi
+				if [ $y -ge $2 ]; then
+					break
+				fi
+				path="${path}/${dir_names[i+j]}"
+				touch "${path}/${file_names[y]}"
+				# Choosing a random number between 1kb and 128kb
+				length=`shuf -i 1024-131072 -n 1`
+				< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
+				echo "${path}/${file_names[y]}"
+				y=$(( y+1 ))
+				j=$(( j+1 ))
+			done
+			i=$(( i+j ))
 		done
-		i=$(( i+j ))
-	done
+	fi
 done
