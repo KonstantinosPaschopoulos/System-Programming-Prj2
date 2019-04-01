@@ -21,6 +21,10 @@ void catchinterrupt(int signo){
   printf("Caught %d\n", signo);
 }
 
+void readinterrupt(int signo){
+  printf("Caught %d, because the receiver child couldn't read from the pipe\n", signo);
+}
+
 int main(int argc, char **argv){
   pid_t sender, receiver, deleter;
   int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
@@ -39,6 +43,9 @@ int main(int argc, char **argv){
   // TODO add signals
   // sigaction(SIGINT, &act, NULL);
   // sigaction(SIGQUIT, &act, NULL);
+
+  act.sa_handler = readinterrupt;
+  sigaction(SIGUSR2, &act, NULL);
 
   // Parsing the input from the command line
   if (argc != 13)

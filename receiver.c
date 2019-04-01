@@ -10,6 +10,13 @@
 #include <fcntl.h>
 #include "my_functions.h"
 
+pid_t parent;
+
+void alarm_action(int signo){
+  kill(parent, SIGUSR2);
+  exit(0);
+}
+
 // Usage: common_dir, id1, id2.id, buffer size, mirror_dir, logfile
 int main(int argc, char **argv){
   char * id2;
@@ -21,6 +28,14 @@ int main(int argc, char **argv){
   char *buffer;
   char *tmp;
   FILE *fp = NULL;
+  static struct sigaction act;
+
+  parent = getppid();
+
+  // Setting up the signal handler
+  act.sa_handler = alarm_action;
+  sigfillset(&(act.sa_mask));
+  sigaction(SIGALRM, &act, NULL);
 
   id2 = strtok(argv[3], ".");
   b = atoi(argv[4]);
@@ -52,6 +67,8 @@ int main(int argc, char **argv){
     }
   }
 
+  alarm(30);
+
   fifoFd = open(fifoName, O_RDONLY);
   if (fifoFd == -1)
   {
@@ -59,14 +76,21 @@ int main(int argc, char **argv){
     exit(2);
   }
 
+  alarm(0);
+
   while(1)
   {
+    alarm(30);
+
     // Reading the two initial bytes
     if (read(fifoFd, &nameLength, sizeof(nameLength)) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+
+    // Reset and reinitiate the alarm for the next read
+    alarm(0);
 
     // This is the signal that the transfer has finished
     if (nameLength == 00)
@@ -81,6 +105,8 @@ int main(int argc, char **argv){
       exit(2);
     }
 
+    alarm(30);
+
     // Reading the name of the file that is going to be transfered
     if (read(fifoFd, fileName, nameLength) == -1)
     {
@@ -88,12 +114,17 @@ int main(int argc, char **argv){
       exit(2);
     }
 
+    alarm(0);
+    alarm(30);
+
     // Reading if the file is a directory or not
     if (read(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+
+    alarm(0);
 
     tmp = strchr(fileName, '/');
     if (tmp != NULL)
@@ -124,6 +155,8 @@ int main(int argc, char **argv){
       exit(2);
     }
 
+    alarm(30);
+
     // Reading the length of the file
     if (read(fifoFd, &fileLength, sizeof(fileLength)) == -1)
     {
@@ -131,10 +164,14 @@ int main(int argc, char **argv){
       exit(2);
     }
 
+    alarm(0);
+
     // Reading the file using a buffer of b bytes
     remaining = fileLength;
     while (remaining > 0)
     {
+      alarm(30);
+
       memset(buffer, 0, b);
       if (remaining > b)
       {
@@ -158,6 +195,7 @@ int main(int argc, char **argv){
       }
 
       printf("________ %s ________\n", buffer);
+      alarm(0);
 
       remaining -= b;
     }
