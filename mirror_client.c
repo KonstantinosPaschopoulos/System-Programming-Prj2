@@ -229,7 +229,7 @@ int main(int argc, char **argv){
         }
         if (sender == 0)
         {
-          execl("sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, logfile_name, NULL);
+          execl("./sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, logfile_name, NULL);
           perror("exec failed");
           exit(2);
         }
@@ -242,7 +242,7 @@ int main(int argc, char **argv){
         }
         if (receiver == 0)
         {
-          execl("receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, logfile_name, NULL);
+          execl("./receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, logfile_name, NULL);
           perror("exec failed");
           exit(2);
         }
@@ -340,7 +340,7 @@ int main(int argc, char **argv){
           }
           if (sender == 0)
           {
-            execl("sender", "sender", common_path, id_str, event->name, buffStr, input_path, logfile_name, NULL);
+            execl("./sender", "sender", common_path, id_str, event->name, buffStr, input_path, logfile_name, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -353,7 +353,7 @@ int main(int argc, char **argv){
           }
           if (receiver == 0)
           {
-            execl("receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, logfile_name, NULL);
+            execl("./receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, logfile_name, NULL);
             perror("exec failed");
             exit(2);
           }
@@ -396,7 +396,7 @@ int main(int argc, char **argv){
           }
           if (deleter == 0)
           {
-            execl("deleter", "deleter", mirror_path, event->name, NULL);
+            execl("./deleter", "deleter", mirror_path, event->name, NULL);
             perror("exec failed");
             exit(2);
           }

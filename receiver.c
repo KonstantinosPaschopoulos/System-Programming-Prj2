@@ -48,10 +48,10 @@ int main(int argc, char **argv){
     exit(2);
   }
 
-  buffer = (char*)malloc(b * sizeof(char));
+  buffer = (char*)calloc((b + 1), sizeof(char));
   if (buffer == NULL)
   {
-    perror("Malloc failed");
+    perror("calloc failed");
     exit(2);
   }
 
@@ -98,7 +98,7 @@ int main(int argc, char **argv){
       break;
     }
 
-    fileName = (char*)calloc(nameLength, sizeof(char));
+    fileName = (char*)calloc((nameLength + 1), sizeof(char));
     if (fileName == NULL)
     {
       perror("Calloc failed");
@@ -129,8 +129,7 @@ int main(int argc, char **argv){
     tmp = strchr(fileName, '/');
     if (tmp != NULL)
     {
-      tmp = tmp + 1;
-      strcpy(fileName, tmp);
+      memmove(fileName, tmp + 1, strlen(tmp));
     }
     sprintf(path, "%s/%s/%s", argv[5], id2, fileName);
 
@@ -144,6 +143,7 @@ int main(int argc, char **argv){
         exit(2);
       }
 
+      free(fileName);
       continue;
     }
 
