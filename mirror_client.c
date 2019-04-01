@@ -18,7 +18,7 @@ volatile sig_atomic_t flag = 1;
 
 void catchinterrupt(int signo){
   flag = 0;
-  printf("Caught %d\n", signo);
+  printf("Caught %d. Deleting the mirror_dir and the .id file from the common_dir\n", signo);
 }
 
 void readinterrupt(int signo){
@@ -28,21 +28,18 @@ void readinterrupt(int signo){
 int main(int argc, char **argv){
   pid_t sender, receiver, deleter;
   int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
-	char buffer[EVENT_BUF_LEN];
-  DIR *common_dir, *input_dir, *mirror_dir;
-  char id_str[100], buffStr[100], id_file[100], message[100];
+  char id_str[100], buffStr[100], id_file[100], message[100], buffer[EVENT_BUF_LEN];
   char common_path[50], input_path[50], mirror_path[50], tmp_path[100], logfile_name[50];
+  DIR *common_dir, *input_dir, *mirror_dir, *dir;
   FILE *logfile = NULL, *idfile = NULL;
   static struct sigaction act;
-  DIR *dir;
   struct dirent *ent;
 
   // Setting up the signal handler
   act.sa_handler = catchinterrupt;
   sigfillset(&(act.sa_mask));
-  // TODO add signals
-  // sigaction(SIGINT, &act, NULL);
-  // sigaction(SIGQUIT, &act, NULL);
+  sigaction(SIGINT, &act, NULL);
+  sigaction(SIGQUIT, &act, NULL);
 
   act.sa_handler = readinterrupt;
   sigaction(SIGUSR2, &act, NULL);
@@ -74,6 +71,7 @@ int main(int argc, char **argv){
             perror("mkdir failed");
             exit(2);
           }
+          common_dir = opendir(argv[i + 1]);
         }
         else
         {
@@ -291,12 +289,25 @@ int main(int argc, char **argv){
 
   // The client is monitoring the common_dir only cheking for changes in the .id files
   read_offset = 0;
-  while(1)  // TODO add signal flag
+  while(flag == 1)
   {
     // Read next series of events
 		length = read(inotifyFd, buffer + read_offset, sizeof(buffer) - read_offset);
 		if (length < 0)
     {
+      if (errno == EINTR)
+      {
+        // Read was interupted by a signal, check if it was SIGINT or SIGQUIT
+        if (flag == 0)
+        {
+          break;
+        }
+        else
+        {
+          perror("inotify read was interupted by a signal different than SIGINT or SIGQUIT");
+          exit(2);
+        }
+      }
       perror("inotify read failed");
       exit(2);
     }
@@ -415,8 +426,35 @@ int main(int argc, char **argv){
   inotify_rm_watch(inotifyFd, wd);
   close(inotifyFd);
 
-  sprintf(message, "CLIENT_DISCONNECTED %d\n", id);
-  write_to_logfile(argv[6], message);
+  // Deleting the local mirror_dir
+  deleter = fork();
+  if (deleter < 0)
+  {
+    perror("rm mirror_dir Fork Failed");
+    exit(2);
+  }
+  if (deleter == 0)
+  {
+    execl("/bin/rm", "rm", "-rf", mirror_path, NULL);
+    perror("exec failed");
+    exit(2);
+  }
+  wait(&status);
+
+  // Deleting the .id file
+  deleter = fork();
+  if (deleter < 0)
+  {
+    perror("rm .id Fork Failed");
+    exit(2);
+  }
+  if (deleter == 0)
+  {
+    execl("/bin/rm", "rm", "-rf", tmp_path, NULL);
+    perror("exec failed");
+    exit(2);
+  }
+  wait(&status);
 
   if (closedir(input_dir) == -1)
   {
@@ -433,6 +471,9 @@ int main(int argc, char **argv){
     perror("Closing the common directory failed");
     exit(2);
   }
+
+  sprintf(message, "CLIENT_DISCONNECTED %d\n", id);
+  write_to_logfile(logfile_name, message);
 
   return 0;
 }
