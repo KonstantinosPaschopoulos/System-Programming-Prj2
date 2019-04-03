@@ -10,11 +10,9 @@
 #include <fcntl.h>
 #include "my_functions.h"
 
-pid_t parent;
-
 void alarm_action(int signo){
-  kill(parent, SIGUSR2);
-  exit(0);
+  kill(getppid(), SIGUSR2);
+  exit(3);
 }
 
 // Usage: common_dir, id1, id2.id, buffer size, mirror_dir, logfile
@@ -29,8 +27,6 @@ int main(int argc, char **argv){
   char *tmp;
   FILE *fp = NULL;
   static struct sigaction act;
-
-  parent = getppid();
 
   // Setting up the signal handler
   act.sa_handler = alarm_action;
@@ -194,7 +190,6 @@ int main(int argc, char **argv){
         fwrite(buffer, sizeof(char), remaining, fp);
       }
 
-      printf("________ %s ________\n", buffer);
       alarm(0);
 
       remaining -= b;
