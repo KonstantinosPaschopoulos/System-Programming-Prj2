@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# The onyl characters that are allowed to be in the names and inside the files
-setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 # A function that returns random alphanumeric strings of specified length
+# Note: I am not using this function in this script. I created it it before seeing in the forums
+# that you want something different. The script now calls the randomString.c program for this purpose.
 function randomString()
 {
+	# The only characters that are allowed to be in the names and inside the files
+	local setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	local len=${#setOfCharacters}
 	len=$(( len-1 ))
 
@@ -63,9 +64,7 @@ fi
 # Creating the directory names
 dir_names[0]="$1";
 for ((i=1; i <= $3; i++)); do
-	# Deciding how long the name of each directory will be using shuf
-	length=`shuf -i 1-8 -n 1`
-	tmp=$(randomString $length)
+	tmp=`./randomString 1 8`
 	# Storing the random alphanumeric string in an array
 	dir_names[$i]="$tmp";
 done
@@ -94,9 +93,7 @@ fi
 
 # Creating the file names
 for ((i=0; i < $2; i++)); do
-	# Deciding how long the name of each file will be using shuf
-	length=`shuf -i 1-8 -n 1`
-	tmp=$(randomString $length)
+	tmp=`./randomString 1 8`
 	# Storing the random alphanumeric string in an array
 	file_names[$i]="$tmp";
 done
@@ -111,8 +108,8 @@ while [ $y -lt $2 ]; do
 		path="$1"
 		touch "${path}/${file_names[y]}"
 		# Choosing a random number between 1kb and 128kb
-		length=`shuf -i 1024-131072 -n 1`
-		< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
+		tmpString=`./randomString 1024 131072`
+		echo "$tmpString" > "${path}/${file_names[y]}"
 		echo "${path}/${file_names[y]}"
 		y=$(( y+1 ))
 	else
@@ -125,8 +122,8 @@ while [ $y -lt $2 ]; do
 			path="$1"
 			touch "${path}/${file_names[y]}"
 			# Choosing a random number between 1kb and 128kb
-			length=`shuf -i 1024-131072 -n 1`
-			< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
+			tmpString=`./randomString 1024 131072`
+			echo "$tmpString" > "${path}/${file_names[y]}"
 			echo "${path}/${file_names[y]}"
 			y=$(( y+1 ))
 			j=0
@@ -140,8 +137,8 @@ while [ $y -lt $2 ]; do
 				path="${path}/${dir_names[i+j]}"
 				touch "${path}/${file_names[y]}"
 				# Choosing a random number between 1kb and 128kb
-				length=`shuf -i 1024-131072 -n 1`
-				< /dev/urandom tr -dc $setOfCharacters | head -c "$length" > "${path}/${file_names[y]}"
+				tmpString=`./randomString 1024 131072`
+				echo "$tmpString" > "${path}/${file_names[y]}"
 				echo "${path}/${file_names[y]}"
 				y=$(( y+1 ))
 				j=$(( j+1 ))
