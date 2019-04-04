@@ -21,12 +21,8 @@ void catchinterrupt(int signo){
   printf("Caught %d. Deleting the mirror_dir and the .id file from the common_dir\n", signo);
 }
 
-void readinterrupt(int signo){
-  printf("Caught %d, because the receiver child couldn't read from the pipe\n", signo);
-}
-
 int main(int argc, char **argv){
-  pid_t sender, receiver, deleter;
+  pid_t deleter, sync;
   int inotifyFd, wd, length, read_ptr, read_offset, i, id, b, status;
   char id_str[100], buffStr[100], id_file[100], message[100], buffer[EVENT_BUF_LEN];
   char common_path[50], input_path[50], mirror_path[50], tmp_path[100], logfile_name[50];
@@ -40,9 +36,6 @@ int main(int argc, char **argv){
   sigfillset(&(act.sa_mask));
   sigaction(SIGINT, &act, NULL);
   sigaction(SIGQUIT, &act, NULL);
-
-  act.sa_handler = readinterrupt;
-  sigaction(SIGUSR2, &act, NULL);
 
   // Parsing the input from the command line
   if (argc != 13)
@@ -221,57 +214,25 @@ int main(int argc, char **argv){
     {
       if ((strstr(ent->d_name, ".id") != NULL) && (strcmp(ent->d_name, id_file) != 0))
       {
-        sender = fork();
-        if (sender < 0)
+        // Each syncing happens in a new process
+        sync = fork();
+        if (sync < 0)
         {
-          perror("Sender Fork Failed");
+          perror("Syncing Fork Failed");
           exit(2);
         }
-        if (sender == 0)
+        if (sync == 0)
         {
-          execl("./sender", "sender", common_path, id_str, ent->d_name, buffStr, input_path, logfile_name, NULL);
+          execl("./syncing", "syncing", common_path, id_str, ent->d_name, buffStr, input_path, logfile_name, mirror_path, NULL);
           perror("exec failed");
           exit(2);
-        }
-
-        receiver = fork();
-        if (receiver < 0)
-        {
-          perror("Receiver Fork Failed");
-          exit(2);
-        }
-        if (receiver == 0)
-        {
-          execl("./receiver", "receiver", common_path, id_str, ent->d_name, buffStr, mirror_path, logfile_name, NULL);
-          perror("exec failed");
-          exit(2);
-        }
-
-        if (wait(&status) > 0)
-        {
-          if (WIFEXITED(status))
-          {
-            // They return 12 if everything went normally
-            if (WEXITSTATUS(status) == 12)
-            {
-              printf("Transfer is complete\n");
-            }
-          }
-        }
-        if (wait(&status) > 0)
-        {
-          if (WIFEXITED(status))
-          {
-            // They return 12 if everything went normally
-            if (WEXITSTATUS(status) == 12)
-            {
-              printf("Transfer is complete\n");
-            }
-          }
         }
       }
     }
   }
+
+  // Wait for the first syncing phase to finish
+  while (wait(&status) > 0);
 
   // Creating an inotify instance to monitor the common_dir
   inotifyFd = inotify_init();
@@ -287,7 +248,6 @@ int main(int argc, char **argv){
     exit(2);
   }
 
-  // The client is monitoring the common_dir only cheking for changes in the .id files
   read_offset = 0;
   while(flag == 1)
   {
@@ -328,66 +288,29 @@ int main(int argc, char **argv){
 			// In this case the event is fully received
       if (event->mask & IN_CREATE)
       {
-        // A new file has been created
+        // A new .id file has been created
         if (strstr(event->name, ".id") != NULL)
         {
-          // The new file that was created is an .id file so the two children are created
-          sender = fork();
-          if (sender < 0)
+          // Each syncing happens in a new process
+          sync = fork();
+          if (sync < 0)
           {
-            perror("Sender Fork Failed");
+            perror("Syncing Fork Failed");
             exit(2);
           }
-          if (sender == 0)
+          if (sync == 0)
           {
-            execl("./sender", "sender", common_path, id_str, event->name, buffStr, input_path, logfile_name, NULL);
+            execl("./syncing", "syncing", common_path, id_str, event->name, buffStr, input_path, logfile_name, mirror_path, NULL);
             perror("exec failed");
             exit(2);
-          }
-
-          receiver = fork();
-          if (receiver < 0)
-          {
-            perror("Receiver Fork Failed");
-            exit(2);
-          }
-          if (receiver == 0)
-          {
-            execl("./receiver", "receiver", common_path, id_str, event->name, buffStr, mirror_path, logfile_name, NULL);
-            perror("exec failed");
-            exit(2);
-          }
-
-          if (wait(&status) > 0)
-          {
-            if (WIFEXITED(status))
-            {
-              // They return 12 if everything went normally
-              if (WEXITSTATUS(status) == 12)
-              {
-                printf("Transfer is complete\n");
-              }
-            }
-          }
-          if (wait(&status) > 0)
-          {
-            if (WIFEXITED(status))
-            {
-              // They return 12 if everything went normally
-              if (WEXITSTATUS(status) == 12)
-              {
-                printf("Transfer is complete\n");
-              }
-            }
           }
         }
       }
       else if (event->mask & IN_DELETE)
       {
-        // A file has been deleted
         if ((strstr(event->name, ".id") != NULL) && (strcmp(event->name, id_file) != 0))
         {
-          // The new that was deleted is an .id file
+          // The file that was deleted is an .id file
           deleter = fork();
           if (deleter < 0)
           {
@@ -421,6 +344,8 @@ int main(int argc, char **argv){
       read_offset = 0;
     }
   }
+
+  while (wait(&status) > 0);
 
   // Closing the inotify instance
   inotify_rm_watch(inotifyFd, wd);
