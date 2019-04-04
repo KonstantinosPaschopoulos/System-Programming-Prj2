@@ -183,26 +183,21 @@ int main(int argc, char **argv){
           perror("Reading failed");
           exit(2);
         }
-        total += nread;
-
-        fwrite(buffer, sizeof(char), b, fp);
       }
       else
       {
-        // TODO is this useful
         if ((nread = read(fifoFd, buffer, remaining)) == -1)
         {
           perror("Reading failed");
           exit(2);
         }
-        total += nread;
-
-        fwrite(buffer, sizeof(char), remaining, fp);
       }
+      fwrite(buffer, sizeof(char), nread, fp);
+      total += nread;
 
       alarm(0);
 
-      remaining -= b;
+      remaining -= nread;
     }
 
     // I count only the files that I receive, not the directories
