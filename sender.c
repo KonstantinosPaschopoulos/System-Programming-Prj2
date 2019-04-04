@@ -15,9 +15,10 @@ void traverseInput(int, char *, int, char *);
 // Usage: common_dir, id1, id2.id, buffer size, input_dir, logfile
 int main(int argc, char **argv){
   char * id2;
-  char fifoName[100];
+  char fifoName[100], message[100];
   int fifoFd;
   short nameLength;
+  ssize_t nread;
 
   id2 = strtok(argv[3], ".");
   sprintf(fifoName, "%s/%s_to_%s.fifo", argv[1], argv[2], id2);
@@ -43,11 +44,13 @@ int main(int argc, char **argv){
 
   // Sending 00 to signal that the transfer is done
   nameLength = (short)00;
-  if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
+  if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
   {
     perror("Write failed");
     exit(2);
   }
+  sprintf(message, "BYTES_SENT %d\n", (int)nread);
+  write_to_logfile(argv[6], message);
 
   if (close(fifoFd) == -1)
   {
@@ -63,9 +66,10 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
   struct dirent *ent;
   char next_path[300], message[100];
   short nameLength;
-  int fileLength, n, dir_or_not;
+  int fileLength, n, dir_or_not, total;
   FILE* fp = NULL;
   char *buffer;
+  ssize_t nread;
 
   dir = opendir(input);
   if (dir == NULL)
@@ -76,6 +80,7 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
 
   while ((ent = readdir(dir)) != NULL)
   {
+    total = 0;
     sprintf(next_path, "%s/%s", input, ent->d_name);
     if (ent->d_type == DT_DIR)
     {
@@ -86,26 +91,32 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
 
       // Sending 2 bytes that declare the length of the directory's name
       nameLength = (short)strlen(next_path);
-      if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
+      if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       // Sending the name of the directory
-      if (write(fifoFd, next_path, nameLength) == -1)
+      if ((nread = write(fifoFd, next_path, nameLength)) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       // Sending an integer that represents if it is a regular file or a directory
       dir_or_not = 1;
-      if (write(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
+      if ((nread = write(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
+
+      sprintf(message, "BYTES_SENT %d\n", total);
+      write_to_logfile(log, message);
 
       // We need to go deeper
       traverseInput(fifoFd, next_path, b, log);
@@ -114,26 +125,29 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
     {
       // Sending 2 bytes that declare the length of the file's name
       nameLength = (short)strlen(next_path);
-      if (write(fifoFd, &nameLength, sizeof(nameLength)) == -1)
+      if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       // Sending the name of the file
-      if (write(fifoFd, next_path, nameLength) == -1)
+      if ((nread = write(fifoFd, next_path, nameLength)) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       // Sending an integer that represents if it is a regular file or a directory
       dir_or_not = 0;
-      if (write(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
+      if ((nread = write(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       // Calculating and sending the size of the file
       fp = fopen(next_path, "r");
@@ -145,11 +159,12 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       fseek(fp, 0L, SEEK_END);
       fileLength = (int)ftell(fp);
 
-      if (write(fifoFd, &fileLength, sizeof(fileLength)) == -1)
+      if ((nread = write(fifoFd, &fileLength, sizeof(fileLength))) == -1)
       {
         perror("Write failed");
         exit(2);
       }
+      total += nread;
 
       fseek(fp, 0L, SEEK_SET);
 
@@ -163,18 +178,19 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       // Using fgets to read b bytes and send them through the named pipe
       while ((n = fread(buffer, sizeof(char), b, fp)) > 0)
       {
-        if (write(fifoFd, buffer, n) == -1)
+        if ((nread = write(fifoFd, buffer, n)) == -1)
         {
           perror("Write failed");
           exit(2);
         }
+        total += nread;
 
         memset(buffer, 0, b);
       }
 
       sprintf(message, "FILE_SENT %s\n", next_path);
       write_to_logfile(log, message);
-      sprintf(message, "BYTES_SENT %d\n", fileLength);
+      sprintf(message, "BYTES_SENT %d\n", total);
       write_to_logfile(log, message);
 
       fclose(fp);

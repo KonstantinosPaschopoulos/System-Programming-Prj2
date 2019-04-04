@@ -19,12 +19,10 @@ void alarm_action(int signo){
 int main(int argc, char **argv){
   char * id2;
   short nameLength;
-  int fileLength;
   char fifoName[100], path[300], tmp_path[300], message[100];
-  char *fileName;
-  int fifoFd, b, remaining, dir_or_not;
-  char *buffer;
-  char *tmp;
+  int fifoFd, b, remaining, dir_or_not, fileLength, total;
+  ssize_t nread;
+  char *buffer, *tmp, *fileName;
   FILE *fp = NULL;
   static struct sigaction act;
 
@@ -76,14 +74,16 @@ int main(int argc, char **argv){
 
   while(1)
   {
+    total = 0;
     alarm(30);
 
     // Reading the two initial bytes
-    if (read(fifoFd, &nameLength, sizeof(nameLength)) == -1)
+    if ((nread = read(fifoFd, &nameLength, sizeof(nameLength))) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+    total += nread;
 
     // Reset and reinitiate the alarm for the next read
     alarm(0);
@@ -91,6 +91,8 @@ int main(int argc, char **argv){
     // This is the signal that the transfer has finished
     if (nameLength == 00)
     {
+      sprintf(message, "BYTES_RECEIVED %d\n", total);
+      write_to_logfile(argv[6], message);
       break;
     }
 
@@ -104,30 +106,36 @@ int main(int argc, char **argv){
     alarm(30);
 
     // Reading the name of the file that is going to be transfered
-    if (read(fifoFd, fileName, nameLength) == -1)
+    if ((nread = read(fifoFd, fileName, nameLength)) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+    total += nread;
 
     alarm(0);
     alarm(30);
 
     // Reading if the file is a directory or not
-    if (read(fifoFd, &dir_or_not, sizeof(dir_or_not)) == -1)
+    if ((nread = read(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+    total += nread;
 
     alarm(0);
 
     tmp = strchr(fileName, '/');
+    printf("%d ---------- %s |", dir_or_not, fileName);
     if (tmp != NULL)
     {
-      memmove(fileName, tmp + 1, strlen(tmp));
+      // memmove(fileName, tmp + 1, strlen(tmp));
+      strcpy(fileName, tmp + 1);
     }
+    printf("HHHHHHHHHHHHHHHHHh %s\n", fileName);
     sprintf(path, "%s/%s/%s", argv[5], id2, fileName);
+    // printf("%s\n", path);
 
     // If the file that was sent is a directory I only create the directory
     // and skip the rest of the proccess
@@ -138,6 +146,8 @@ int main(int argc, char **argv){
         perror("Directory mkdir failed");
         exit(2);
       }
+      sprintf(message, "BYTES_RECEIVED %d\n", total);
+      write_to_logfile(argv[6], message);
 
       free(fileName);
       continue;
@@ -154,11 +164,12 @@ int main(int argc, char **argv){
     alarm(30);
 
     // Reading the length of the file
-    if (read(fifoFd, &fileLength, sizeof(fileLength)) == -1)
+    if ((nread = read(fifoFd, &fileLength, sizeof(fileLength))) == -1)
     {
       perror("Reading failed");
       exit(2);
     }
+    total += nread;
 
     alarm(0);
 
@@ -171,21 +182,24 @@ int main(int argc, char **argv){
       memset(buffer, 0, b);
       if (remaining > b)
       {
-        if (read(fifoFd, buffer, b) == -1)
+        if ((nread = read(fifoFd, buffer, b)) == -1)
         {
           perror("Reading failed");
           exit(2);
         }
+        total += nread;
 
         fwrite(buffer, sizeof(char), b, fp);
       }
       else
       {
-        if (read(fifoFd, buffer, remaining) == -1)
+        // TODO is this useful
+        if ((nread = read(fifoFd, buffer, remaining)) == -1)
         {
           perror("Reading failed");
           exit(2);
         }
+        total += nread;
 
         fwrite(buffer, sizeof(char), remaining, fp);
       }
@@ -195,10 +209,10 @@ int main(int argc, char **argv){
       remaining -= b;
     }
 
-    // Writing to the logfile
+    // I count only the files that I receive, not the directories
     sprintf(message, "FILE_RECEIVED %s\n", path);
     write_to_logfile(argv[6], message);
-    sprintf(message, "BYTES_RECEIVED %d\n", fileLength);
+    sprintf(message, "BYTES_RECEIVED %d\n", total);
     write_to_logfile(argv[6], message);
 
     free(fileName);
