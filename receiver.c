@@ -127,15 +127,11 @@ int main(int argc, char **argv){
     alarm(0);
 
     tmp = strchr(fileName, '/');
-    printf("%d ---------- %s |", dir_or_not, fileName);
     if (tmp != NULL)
     {
-      // memmove(fileName, tmp + 1, strlen(tmp));
-      strcpy(fileName, tmp + 1);
+      memmove(fileName, tmp + 1, strlen(tmp));
     }
-    printf("HHHHHHHHHHHHHHHHHh %s\n", fileName);
     sprintf(path, "%s/%s/%s", argv[5], id2, fileName);
-    // printf("%s\n", path);
 
     // If the file that was sent is a directory I only create the directory
     // and skip the rest of the proccess
