@@ -324,7 +324,9 @@ int main(int argc, char **argv){
             exit(2);
           }
 
-          wait(&status);
+          // Wait for the removal to be completed to avoid race conditions
+          waitpid(deleter, &status, 0);
+          printf("Removal of %s from the mirror folder has been succesful.\n", event->name);
         }
       }
 
