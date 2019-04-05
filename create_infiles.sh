@@ -79,7 +79,7 @@ if [ $4 -ge 1 ]; then
 		j=0
 		# The internal loop counts how many levels have been created
 		while [ $j -lt $4 ]; do
-			if [ $(( j+i )) -gt $(( $3+1 )) ]; then
+			if [ $(( j+i )) -gt $3 ]; then
 				break
 			fi
 			path="${path}/${dir_names[i+j]}"
@@ -114,21 +114,22 @@ while [ $y -lt $2 ]; do
 		y=$(( y+1 ))
 	else
 		i=1
+		path="$1"
+		touch "${path}/${file_names[y]}"
+		# Choosing a random number between 1kb and 128kb
+		tmpString=`./randomString 1024 131072`
+		echo "$tmpString" > "${path}/${file_names[y]}"
+		echo "${path}/${file_names[y]}"
+		y=$(( y+1 ))
 		# Looping around the directories to achieve a round-robin distribution
 		while [ $i -le $3 ]; do
 			if [ $y -ge $2 ]; then
 				break
 			fi
 			path="$1"
-			touch "${path}/${file_names[y]}"
-			# Choosing a random number between 1kb and 128kb
-			tmpString=`./randomString 1024 131072`
-			echo "$tmpString" > "${path}/${file_names[y]}"
-			echo "${path}/${file_names[y]}"
-			y=$(( y+1 ))
 			j=0
 			while [ $j -lt $4 ]; do
-				if [ $(( j+i )) -gt $(( $3+1 )) ]; then
+				if [ $(( j+i )) -gt $3 ]; then
 					break
 				fi
 				if [ $y -ge $2 ]; then
