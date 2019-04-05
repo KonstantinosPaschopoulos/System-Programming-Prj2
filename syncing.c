@@ -110,17 +110,19 @@ int main(int argc, char **argv){
           // They return 12 if everything went normally
           if (WEXITSTATUS(status) == 12)
           {
-            retry = 1;
             printf("Transfer from %s.id to %s is complete.\n", argv[2], argv[3]);
+            retry = 1;
           }
           else
           {
+            // TODO call deleter when failing
             kill(receiver, SIGKILL);
           }
         }
       }
     }
   } while ((retry > 1) && (retry < 4));
+  retry = 1;
 
   return 0;
 }

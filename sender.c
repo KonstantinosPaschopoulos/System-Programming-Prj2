@@ -29,7 +29,8 @@ int main(int argc, char **argv){
     if (errno != EEXIST)
     {
       perror("Sender FIFO");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
   }
 
@@ -37,7 +38,8 @@ int main(int argc, char **argv){
   if (fifoFd == -1)
   {
     perror("Opening FIFO failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   traverseInput(fifoFd, argv[5], atoi(argv[4]), argv[6]);
@@ -47,7 +49,8 @@ int main(int argc, char **argv){
   if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
   {
     perror("Write failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
   sprintf(message, "BYTES_SENT %d\n", (int)nread);
   write_to_logfile(argv[6], message);
@@ -55,7 +58,8 @@ int main(int argc, char **argv){
   if (close(fifoFd) == -1)
   {
     perror("Close failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   return 12;
@@ -75,7 +79,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
   if (dir == NULL)
   {
     perror("Could not open input directory");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   while ((ent = readdir(dir)) != NULL)
@@ -94,7 +99,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -102,7 +108,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, next_path, nameLength)) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -111,7 +118,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -128,7 +136,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, &nameLength, sizeof(nameLength))) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -136,7 +145,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, next_path, nameLength)) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -145,7 +155,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -154,7 +165,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if (fp == NULL)
       {
         perror("Could not open file");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       fseek(fp, 0L, SEEK_END);
       fileLength = (int)ftell(fp);
@@ -162,7 +174,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if ((nread = write(fifoFd, &fileLength, sizeof(fileLength))) == -1)
       {
         perror("Write failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       total += nread;
 
@@ -172,7 +185,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
       if (buffer == NULL)
       {
         perror("Calloc failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
 
       // Using fgets to read b bytes and send them through the named pipe
@@ -181,7 +195,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
         if ((nread = write(fifoFd, buffer, n)) == -1)
         {
           perror("Write failed");
-          exit(2);
+          kill(getppid(), SIGUSR1);
+          exit(6);
         }
         total += nread;
 
@@ -201,7 +216,8 @@ void traverseInput(int fifoFd, char *input, int b, char *log){
   if (closedir(dir) == -1)
   {
     perror("Closing the input directory failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   return;

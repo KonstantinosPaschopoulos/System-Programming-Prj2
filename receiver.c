@@ -39,14 +39,16 @@ int main(int argc, char **argv){
   if (mkdir(tmp_path, 0777) == -1)
   {
     perror("mirror/id mkdir failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   buffer = (char*)calloc((b + 1), sizeof(char));
   if (buffer == NULL)
   {
     perror("calloc failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   sprintf(fifoName, "%s/%s_to_%s.fifo", argv[1], id2, argv[2]);
@@ -57,7 +59,8 @@ int main(int argc, char **argv){
     if (errno != EEXIST)
     {
       perror("Receiver FIFO");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
   }
 
@@ -67,7 +70,8 @@ int main(int argc, char **argv){
   if (fifoFd == -1)
   {
     perror("Opening FIFO failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
 
   alarm(0);
@@ -81,7 +85,8 @@ int main(int argc, char **argv){
     if ((nread = read(fifoFd, &nameLength, sizeof(nameLength))) == -1)
     {
       perror("Reading failed");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
     total += nread;
 
@@ -100,7 +105,8 @@ int main(int argc, char **argv){
     if (fileName == NULL)
     {
       perror("Calloc failed");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
 
     alarm(30);
@@ -109,7 +115,8 @@ int main(int argc, char **argv){
     if ((nread = read(fifoFd, fileName, nameLength)) == -1)
     {
       perror("Reading failed");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
     total += nread;
 
@@ -120,7 +127,8 @@ int main(int argc, char **argv){
     if ((nread = read(fifoFd, &dir_or_not, sizeof(dir_or_not))) == -1)
     {
       perror("Reading failed");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
     total += nread;
 
@@ -140,7 +148,8 @@ int main(int argc, char **argv){
       if (mkdir(path, 0777) == -1)
       {
         perror("Directory mkdir failed");
-        exit(2);
+        kill(getppid(), SIGUSR1);
+        exit(6);
       }
       sprintf(message, "BYTES_RECEIVED %d\n", total);
       write_to_logfile(argv[6], message);
@@ -154,7 +163,8 @@ int main(int argc, char **argv){
     if (fp == NULL)
     {
       perror("Couldn't create the mirrored file");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
 
     alarm(30);
@@ -163,7 +173,8 @@ int main(int argc, char **argv){
     if ((nread = read(fifoFd, &fileLength, sizeof(fileLength))) == -1)
     {
       perror("Reading failed");
-      exit(2);
+      kill(getppid(), SIGUSR1);
+      exit(6);
     }
     total += nread;
 
@@ -181,7 +192,8 @@ int main(int argc, char **argv){
         if ((nread = read(fifoFd, buffer, b)) == -1)
         {
           perror("Reading failed");
-          exit(2);
+          kill(getppid(), SIGUSR1);
+          exit(6);
         }
       }
       else
@@ -189,7 +201,8 @@ int main(int argc, char **argv){
         if ((nread = read(fifoFd, buffer, remaining)) == -1)
         {
           perror("Reading failed");
-          exit(2);
+          kill(getppid(), SIGUSR1);
+          exit(6);
         }
       }
       fwrite(buffer, sizeof(char), nread, fp);
@@ -213,12 +226,14 @@ int main(int argc, char **argv){
   if (close(fifoFd) == -1)
   {
     perror("Close failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
   if (remove(fifoName) == -1) // The receiver is the only one that removes the pipe, to avoid errors
   {
     perror("Remove failed");
-    exit(2);
+    kill(getppid(), SIGUSR1);
+    exit(6);
   }
   free(buffer);
 
