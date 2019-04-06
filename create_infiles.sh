@@ -1,25 +1,6 @@
 #!/bin/bash
 
-# A function that returns random alphanumeric strings of specified length
-# Note: I am not using this function in this script. I created it it before seeing in the forums
-# that you want something different. The script now calls the randomString.c program for this purpose.
-function randomString()
-{
-	# The only characters that are allowed to be in the names and inside the files
-	local setOfCharacters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	local len=${#setOfCharacters}
-	len=$(( len-1 ))
-
-	# Create a random number in every loop and add the character that it corresponds to
-	str=""
-	for ((i=0; i < $1; i++)); do
-		num=`shuf -i 0-${len} -n 1`
-		tmp="${setOfCharacters:$num:1}"
-		str="${str}${tmp}"
-	done
-
-	echo "$str"
-}
+# Usage: ./create_infiles.sh dir_name num_of_files num_of_dirs levels
 
 declare -a dir_names
 declare -a file_names

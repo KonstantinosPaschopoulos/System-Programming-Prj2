@@ -249,7 +249,7 @@ int main(int argc, char **argv){
   }
 
   read_offset = 0;
-  while(flag == 1)
+  while (flag == 1)
   {
     // Read next series of events
 		length = read(inotifyFd, buffer + read_offset, sizeof(buffer) - read_offset);

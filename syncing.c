@@ -115,7 +115,6 @@ int main(int argc, char **argv){
           }
           else
           {
-            // TODO call deleter when failing
             kill(receiver, SIGKILL);
           }
         }
