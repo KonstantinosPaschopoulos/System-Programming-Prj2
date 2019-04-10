@@ -1,4 +1,4 @@
-// The inotify code is based on the lectures of professor Alex Dellis
+// The inotify code is based on the lectures of professor Alex Delis
 // Source: http://cgi.di.uoa.gr/~ad/k22/index.html
 
 #include <stdio.h>

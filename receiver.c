@@ -10,9 +10,23 @@
 #include <fcntl.h>
 #include "my_functions.h"
 
+volatile sig_atomic_t done = 0;
+
 void alarm_action(int signo){
   kill(getppid(), SIGUSR2);
-  exit(3);
+  done++;
+}
+
+// In case of an error I use this function to free
+// the resources that were used before exiting
+void cleanup(int fifoFd, char *fifoName, char *buffer){
+  if (done != 0)
+  {
+    close(fifoFd);
+    remove(fifoName);
+    free(buffer);
+    exit(3);
+  }
 }
 
 // Usage: common_dir, id1, id2.id, buffer size, mirror_dir, logfile
@@ -74,6 +88,7 @@ int main(int argc, char **argv){
     exit(6);
   }
 
+  cleanup(fifoFd, fifoName, buffer);
   alarm(0);
 
   while(1)
@@ -90,6 +105,7 @@ int main(int argc, char **argv){
     }
     total += nread;
 
+    cleanup(fifoFd, fifoName, buffer);
     // Reset and reinitiate the alarm for the next read
     alarm(0);
 
@@ -120,6 +136,7 @@ int main(int argc, char **argv){
     }
     total += nread;
 
+    cleanup(fifoFd, fifoName, buffer);
     alarm(0);
     alarm(30);
 
@@ -132,6 +149,7 @@ int main(int argc, char **argv){
     }
     total += nread;
 
+    cleanup(fifoFd, fifoName, buffer);
     alarm(0);
 
     tmp = strchr(fileName, '/');
@@ -178,6 +196,7 @@ int main(int argc, char **argv){
     }
     total += nread;
 
+    cleanup(fifoFd, fifoName, buffer);
     alarm(0);
 
     // Reading the file using a buffer of b bytes
@@ -208,6 +227,7 @@ int main(int argc, char **argv){
       fwrite(buffer, sizeof(char), nread, fp);
       total += nread;
 
+      cleanup(fifoFd, fifoName, buffer);
       alarm(0);
 
       remaining -= nread;
